@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公共图书借阅平台</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
+body{background:#f5f7fa}
+/*导航栏 蓝白主题*/
+.nav{background:#fff;padding:16px 20px;box-shadow:0 1px 6px #e8edf5;display:flex;justify-content:space-between;align-items:center}
+.nav-title{font-size:22px;color:#165DFF;font-weight:bold}
+.nav-btn a{margin-left:30px;color:#666;text-decoration:none;font-size:16px}
+.nav-btn a.active{color:#165DFF;font-weight:bold}
+.logout{color:#f53f3f !important;}
+.login-box{max-width:420px;margin:80px auto;background:#fff;padding:30px;border-radius:8px;box-shadow:0 2px 12px rgba(22,93,255,0.1);}
+.login-title{text-align:center;color:#165DFF;font-size:22px;margin-bottom:24px;}
+.container{max-width:1200px;margin:30px auto;padding:0 20px}
+.search-box{background:#fff;padding:24px;border-radius:8px;box-shadow:0 2px 12px rgba(22,93,255,0.1);margin-bottom:20px}
+.search-title{font-size:18px;color:#165DFF;margin-bottom:16px}
+.search-row{display:flex;gap:10px}
+#searchInput{flex:1;padding:12px 16px;border:1px solid #eee;border-radius:6px;font-size:16px}
+#searchBtn{background:#165DFF;color:#fff;border:none;padding:12px 24px;border-radius:6px;cursor:pointer}
+.book-wrap{background:#fff;padding:24px;border-radius:8px;box-shadow:0 2px 12px rgba(22,93,255,0.1)}
+.book-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px}
+.book-item{border:1px solid #eee;padding:16px;border-radius:6px;transition:0.2s}
+.book-item:hover{transform:scale(1.01);box-shadow:0 2px 8px #eee}
+.book-name{font-size:16px;font-weight:bold;margin-bottom:6px}
+.book-author{color:#666;font-size:14px;margin-bottom:6px}
+.book-desc{color:#999;font-size:13px;display:-webkit-box;-webkit-line-clamp:2;overflow:hidden;-webkit-box-orient:vertical;margin-bottom:10px}
+.borrow-btn{background:#165DFF;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer}
+.borrow-btn:disabled{background:#cccccc;cursor:not-allowed}
+/*借阅弹窗*/
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:99}
+.modal-box{width:90%;max-width:450px;background:#fff;border-radius:8px;padding:24px}
+.modal-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-title{font-size:18px;color:#165DFF;font-weight:bold}
+.close-modal{cursor:pointer;font-size:24px;color:#999}
+.form-item{margin-bottom:16px}
+.form-item label{display:block;margin-bottom:6px;color:#333}
+.form-item input,.form-item textarea{width:100%;padding:10px 12px;border:1px solid #eee;border-radius:6px;font-size:15px}
+.tip-text{font-size:14px;color:#666;margin:10px 0}
+.tip-text span{color:#165DFF;font-weight:bold}
+.btn-row{display:flex;gap:12px;margin-top:20px}
+.btn-cancel{flex:1;padding:11px;border:1px solid #eee;background:#fff;border-radius:6px;cursor:pointer}
+.btn-submit{flex:1;padding:11px;background:#165DFF;color:#fff;border:none;border-radius:6px;cursor:pointer}
+/*记录页*/
+.record-item{border:1px solid #eee;padding:16px;border-radius:6px;margin-bottom:12px}
+.record-name{font-weight:bold;font-size:16px;margin-bottom:5px}
+.record-text{font-size:14px;color:#555;line-height:1.6}
+.red-text{color:red;font-weight:bold}
+.blue-text{color:#165DFF}
+.hide{display:none}
+.empty-tip{text-align:center;padding:40px;color:#999;font-size:15px;}
+</style>
+</head>
+<body>
+<!--登录页-->
+<div id="loginPage">
+    <div class="login-box">
+        <div class="login-title">📖 图书管理系统登录</div>
+        <div class="form-item">
+            <label>管理员账号</label>
+            <input type="text" id="loginUser" placeholder="请输入账号">
+        </div>
+        <div class="form-item">
+            <label>管理员密码</label>
+            <input type="password" id="loginPwd" placeholder="请输入密码">
+        </div>
+        <button class="btn-submit" style="width:100%" onclick="adminLogin()">登录系统</button>
+    </div>
+</div>
+
+<!--主页面-->
+<div id="mainPage" class="hide">
+<div class="nav">
+    <div class="nav-title">📖 公共图书借阅平台</div>
+    <div class="nav-btn">
+        <a href="javascript:switchPage('book')" id="navBook">图书检索</a>
+        <a href="javascript:switchPage('record')" id="navRecord">全部借阅/还书记录</a>
+        <a href="javascript:switchPage('addBook')" id="navAdd">添加图书</a>
+        <a href="javascript:logout()" class="logout">退出登录</a>
+    </div>
+</div>
+
+<div class="container">
+    <!--图书检索页-->
+    <div id="pageBook" class="hide">
+        <div class="search-box">
+            <div class="search-title">图书搜索（本地内置书库）</div>
+            <div class="search-row">
+                <input type="text" id="searchInput" placeholder="输入书名、作者搜索">
+                <button id="searchBtn" onclick="searchBooks()">🔍 搜索</button>
+            </div>
+        </div>
+        <div class="book-wrap">
+            <div class="search-title">图书列表</div>
+            <div class="book-list" id="bookList"></div>
+        </div>
+    </div>
+
+    <!--借阅还书记录页-->
+    <div id="pageRecord" class="hide">
+        <div class="book-wrap">
+            <div class="search-title">全部借阅与还书管理</div>
+            <div id="recordBox"></div>
+        </div>
+    </div>
+
+    <!--添加图书页-->
+    <div id="pageAdd" class="hide">
+        <div class="book-wrap">
+            <div class="search-title">新增图书</div>
+            <div class="form-item">
+                <label>图书名称</label>
+                <input type="text" id="addBookName" placeholder="请输入书名">
+            </div>
+            <div class="form-item">
+                <label>图书作者</label>
+                <input type="text" id="addBookAuthor" placeholder="请输入作者名称">
+            </div>
+            <div class="form-item">
+                <label>图书简介</label>
+                <textarea id="addBookDesc" rows="4" placeholder="请输入图书简介"></textarea>
+            </div>
+            <button class="btn-submit" onclick="addNewBook()">保存添加图书</button>
+        </div>
+    </div>
+</div>
+
+<!--借阅弹窗-->
+<div class="modal" id="borrowModal">
+    <div class="modal-box">
+        <div class="modal-top">
+            <div class="modal-title">实名借阅登记（借期2个月）</div>
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+        </div>
+        <div id="modalBookInfo" style="padding-bottom:10px;border-bottom:1px solid #eee;margin-bottom:15px;"></div>
+        <div class="form-item">
+            <label>借阅人姓名</label>
+            <input type="text" id="userName" placeholder="请输入真实姓名">
+        </div>
+        <div class="form-item">
+            <label>18位身份证号码</label>
+            <input type="text" id="idCard" maxlength="18" placeholder="请输入18位身份证号">
+        </div>
+        <div class="tip-text">借阅期限：<span>2个月（60天）</span>，请按时归还</div>
+        <div class="btn-row">
+            <button class="btn-cancel" onclick="closeModal()">取消</button>
+            <button class="btn-submit" onclick="submitBorrow()">确认借阅</button>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+//管理员账号
+const ADMIN = {
+    user: "ypq123",
+    pwd: "264388aa"
+};
+//借期60天
+const BORROW_DAY = 60;
+let currentSelectBook = null;
+//身份证正则
+const idCardReg = /^[1-9]\d{5}(18|19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]$/;
+
+//初始化图书数据
+let bookList = JSON.parse(localStorage.getItem('localBook')) || [
+    {id:1,name:"活着",author:"余华",desc:"讲述福贵坎坷一生，记录时代下普通人的坚韧。"},
+    {id:2,name:"三体",author:"刘慈欣",desc:"经典科幻小说，人类文明与三体文明的星际博弈。"},
+    {id:3,name:"百年孤独",author:"马尔克斯",desc:"魔幻现实主义经典，布恩迪亚家族七代兴衰史。"},
+    {id:4,name:"解忧杂货店",author:"东野圭吾",desc:"温暖治愈，穿越时空的烦恼解忧杂货店。"},
+    {id:5,name:"人类简史",author:"尤瓦尔·赫拉利",desc:"梳理人类数百万年文明进化发展史。"},
+    {id:6,name:"红楼梦",author:"曹雪芹",desc:"四大名著，四大家族兴衰与人间悲欢。"}
+];
+localStorage.setItem('localBook', JSON.stringify(bookList));
+
+//登录
+function adminLogin(){
+    const u = document.getElementById('loginUser').value.trim();
+    const p = document.getElementById('loginPwd').value.trim();
+    if(u === ADMIN.user && p === ADMIN.pwd){
+        localStorage.setItem('isLogin', '1');
+        document.getElementById('loginPage').classList.add('hide');
+        document.getElementById('mainPage').classList.remove('hide');
+        switchPage('book');
+    }else{
+        alert('账号或密码错误');
+    }
+}
+//退出登录
+function logout(){
+    localStorage.removeItem('isLogin');
+    location.reload();
+}
+
+//页面切换+高亮
+function switchPage(type){
+    //全部隐藏
+    document.querySelectorAll('#mainPage > div.container > div').forEach(el=>el.classList.add('hide'));
+    document.querySelectorAll('.nav-btn a').forEach(el=>el.classList.remove('active'));
+    if(type === 'book'){
+        document.getElementById('pageBook').classList.remove('hide');
+        document.getElementById('navBook').classList.add('active');
+        renderBook(bookList);
+    }else if(type === 'record'){
+        document.getElementById('pageRecord').classList.remove('hide');
+        document.getElementById('navRecord').classList.add('active');
+        renderRecord();
+    }else if(type === 'addBook'){
+        document.getElementById('pageAdd').classList.remove('hide');
+        document.getElementById('navAdd').classList.add('active');
+        document.getElementById('addBookName').value = '';
+        document.getElementById('addBookAuthor').value = '';
+        document.getElementById('addBookDesc').value = '';
+    }
+}
+
+//判断图书是否借出未还
+function checkBorrowStatus(bookId){
+    const records = JSON.parse(localStorage.getItem('borrowRecords') || '[]');
+    return records.some(item => item.book.id === bookId && item.status === '借出中');
+}
+
+//渲染图书列表
+function renderBook(list){
+    const wrap = document.getElementById('bookList');
+    wrap.innerHTML = '';
+    list.forEach(book=>{
+        const isBorrow = checkBorrowStatus(book.id);
+        wrap.innerHTML += `
+        <div class="book-item">
+            <div class="book-name">${book.name}</div>
+            <div class="book-author">作者：${book.author}</div>
+            <div class="book-desc">${book.desc}</div>
+            <button class="borrow-btn" ${isBorrow ? 'disabled' : ''} onclick="openBorrowModal(${JSON.stringify(book).replace(/"/g,'&quot;')})">
+                ${isBorrow ? '已被借出' : '立即实名借阅'}
+            </button>
+        </div>`;
+    })
+}
+
+//图书搜索
+function searchBooks(){
+    const key = document.getElementById('searchInput').value.trim().toLowerCase();
+    if(!key){
+        renderBook(bookList);
+        return;
+    }
+    const filter = bookList.filter(item=>
+        item.name.toLowerCase().includes(key) || item.author.toLowerCase().includes(key)
+    );
+    renderBook(filter);
+    if(filter.length === 0) alert('未找到该图书');
+}
+
+//打开借阅弹窗
+function openBorrowModal(book){
+    currentSelectBook = book;
+    document.getElementById('borrowModal').style.display = 'flex';
+    document.getElementById('modalBookInfo').innerHTML = `
+    <p><strong>书名：</strong>${book.name}</p>
+    <p><strong>作者：</strong>${book.author}</p>
+    <p><strong>简介：</strong>${book.desc}</p>`;
+    document.getElementById('userName').value = '';
+    document.getElementById('idCard').value = '';
+}
+function closeModal(){
+    document.getElementById('borrowModal').style.display = 'none';
+    currentSelectBook = null;
+}
+
+//提交借阅
+function submitBorrow(){
+    const name = document.getElementById('userName').value.trim();
+    const idcard = document.getElementById('idCard').value.trim().toUpperCase();
+    if(!name) return alert('请填写借阅人姓名');
+    if(!idCardReg.test(idcard)) return alert('请输入18位有效身份证号');
+
+    const borrowDate = new Date();
+    const returnDate = new Date();
+    returnDate.setDate(borrowDate.getDate() + BORROW_DAY);
+
+    const record = {
+        rid: Date.now(),
+        userName: name,
+        idCard: idcard,
+        book: currentSelectBook,
+        borrowDate: borrowDate.toLocaleDateString(),
+        shouldReturnDate: returnDate.toLocaleDateString(),
+        realReturnDate: '',
+        status: '借出中'
+    };
+    let records = JSON.parse(localStorage.getItem('borrowRecords') || '[]');
+    records.unshift(record);
+    localStorage.setItem('borrowRecords', JSON.stringify(records));
+    alert(`借阅成功！请于${record.shouldReturnDate}前归还图书`);
+    closeModal();
+    renderBook(bookList);
+}
+
+//渲染借阅记录（修复空白问题）
+function renderRecord(){
+    const wrap = document.getElementById('recordBox');
+    const records = JSON.parse(localStorage.getItem('borrowRecords') || '[]');
+    if(!records || records.length === 0){
+        wrap.innerHTML = '<p class="empty-tip">暂无借阅、还书记录</p>';
+        return;
+    }
+    let html = '';
+    records.forEach(item=>{
+        const now = new Date();
+        const due = new Date(item.shouldReturnDate);
+        const isOver = now > due;
+        //身份证脱敏
+        const hideId = item.idCard.replace(/(\d{6})\d{8}(\d{4})/, '$1********$2');
+        html += `
+        <div class="record-item">
+            <div class="record-name">${item.book.name}（${item.book.author}）</div>
+            <div class="record-text">借阅人：${item.userName}  身份证：${hideId}</div>
+            <div class="record-text">借阅日期：${item.borrowDate}</div>
+            <div class="record-text">应还日期：<span class="${isOver?'red-text':'blue-text'}">${item.shouldReturnDate} ${isOver?'【已逾期】':''}</span></div>
+            <div class="record-text">实际还书日期：${item.realReturnDate || '暂未还书'}</div>
+            <div class="record-text">当前状态：${item.status}</div>
+            ${item.status === '借出中' ? `<button class="borrow-btn" onclick="returnBook(${item.rid})" style="margin-top:8px;">确认还书</button>` : ''}
+        </div>`;
+    });
+    wrap.innerHTML = html;
+}
+
+//还书功能
+function returnBook(rid){
+    let records = JSON.parse(localStorage.getItem('borrowRecords'));
+    const idx = records.findIndex(item => item.rid === rid);
+    if(idx > -1){
+        records[idx].status = '已归还';
+        records[idx].realReturnDate = new Date().toLocaleDateString();
+        localStorage.setItem('borrowRecords', JSON.stringify(records));
+        alert('还书成功！图书已解锁可再次借阅');
+        renderRecord();
+        renderBook(bookList);
+    }
+}
+
+//新增图书
+function addNewBook(){
+    const name = document.getElementById('addBookName').value.trim();
+    const author = document.getElementById('addBookAuthor').value.trim();
+    const desc = document.getElementById('addBookDesc').value.trim();
+    if(!name || !author){
+        return alert('书名、作者不能为空');
+    }
+    const newId = bookList.length > 0 ? Math.max(...bookList.map(b=>b.id)) + 1 : 1;
+    const newBook = {id:newId,name,author,desc};
+    bookList.push(newBook);
+    localStorage.setItem('localBook', JSON.stringify(bookList));
+    alert('图书添加成功');
+    switchPage('book');
+}
+
+//页面初始化
+window.onload = function(){
+    const loginState = localStorage.getItem('isLogin');
+    if(loginState === '1'){
+        document.getElementById('loginPage').classList.add('hide');
+        document.getElementById('mainPage').classList.remove('hide');
+        switchPage('book');
+    }
+}
+</script>
+</body>
+</html>
